@@ -1,37 +1,54 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ChevronDown, ArrowRight, ChevronUp, Wallet } from "lucide-react";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ChevronDown, ArrowRight, ChevronUp } from "lucide-react";
 import ActivityChart from "@/components/ActivityChart";
 import { DiamondIcon, BaseGuildIcon, RoundsGrantIcon, VerificationIcon, BaseLearningIcon, SunIcon } from "@/components/icons";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import CustomConnectWallet from "@/components/CustomConnectWallet";
 
 const Dashboard = () => {
   const [showDetails, setShowDetails] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const email = sessionStorage.getItem("userEmail");
+    if (email) {
+      setUserEmail(email);
+    }
+  }, []);
   
   return (
-    <div className="min-h-screen bg-white text-gray-900 flex flex-col">
+    <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Navbar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" />
-            </svg>
+      <div className="bg-black border-b border-gray-800 px-6 py-3 flex items-center justify-between">
+        <div className="relative">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setShowDropdown(!showDropdown)}>
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" />
+              </svg>
+            </div>
+            <span className="font-bold text-lg">score.sui</span>
           </div>
-          <span className="font-bold text-lg">score.sui</span>
+          {showDropdown && userEmail && (
+            <div className="absolute mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+              <div className="py-1">
+                <a href="#" className="block px-4 py-2 text-sm text-gray-700">{userEmail}</a>
+              </div>
+            </div>
+          )}
         </div>
-        <ConnectButton />
       </div>
       
       <div className="flex flex-1">
-      <aside className="w-64 p-4">
+      <aside className="w-64 p-4 bg-black">
         <div className="p-4">
           {/* Sidebar content will go here */}
         </div>
       </aside>
-      <main className="flex-1 p-8 max-w-4xl">
+      <main className="flex-1 p-8 max-w-4xl bg-black">
         <div className="space-y-8">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
@@ -158,6 +175,10 @@ const Dashboard = () => {
                   </Button>
                 </CardContent>
               </Card>
+            </div>
+            
+            <div className="mt-8 flex justify-center">
+              <CustomConnectWallet />
             </div>
           </div>
         </div>

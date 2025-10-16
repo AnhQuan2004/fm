@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { config } from "@/config/env";
+import { jwtDecode } from "jwt-decode";
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -12,6 +13,8 @@ const HeroSection = () => {
   
   const handleCredentialResponse = (response: any) => {
     console.log("Encoded JWT ID token: " + response.credential);
+    const decoded: { email: string } = jwtDecode(response.credential);
+    sessionStorage.setItem("userEmail", decoded.email);
     navigate("/dashboard");
   };
   
