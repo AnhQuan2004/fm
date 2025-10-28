@@ -1,48 +1,203 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import heroBg from "@/assets/hero-bg.jpg";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { config } from "@/config/env";
 import { jwtDecode } from "jwt-decode";
+import { useToast } from "@/components/ui/use-toast";
+import type { UserProfile } from "@/types/profile";
+import { clearSessionProfile, storeSessionProfile } from "@/lib/profile-storage";
+
+type GoogleCredentialResponse = {
+  credential?: string;
+};
+
+type GoogleInitializeOptions = {
+  client_id: string;
+  callback: (response: GoogleCredentialResponse) => void;
+};
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (options: GoogleInitializeOptions) => void;
+          renderButton: (element: HTMLElement | null, options: Record<string, unknown>) => void;
+        };
+      };
+    };
+  }
+}
+
+const asUserRole = (value: unknown): UserProfile["role"] => {
+  if (value === "admin" || value === "partner" || value === "user") {
+    return value;
+  }
+  return undefined;
+};
 
 const HeroSection = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
-  
-  const handleCredentialResponse = (response: any) => {
-    console.log("Encoded JWT ID token: " + response.credential);
-    const decoded: { email: string } = jwtDecode(response.credential);
-    sessionStorage.setItem("userEmail", decoded.email);
-    navigate("/dashboard");
-  };
-  
-  const handleGetStarted = () => {
-    if (email) {
-      navigate("/verify-code", { state: { email } });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const handlePostAuthRouting = useCallback(
+    async (emailAddress: string) => {
+      sessionStorage.setItem("userEmail", emailAddress);
+      clearSessionProfile();
+
+      let hydratedProfile: UserProfile | null = null;
+
+      try {
+        console.debug("[HeroSection] Fetching profile", {
+          endpoint: `${config.authApiBaseUrl}/profile`,
+          email: emailAddress,
+        });
+        const response = await fetch(
+          `${config.authApiBaseUrl}/profile?email=${encodeURIComponent(emailAddress)}`,
+        );
+
+        if (response.ok) {
+          const data = await response.json().catch(() => ({}));
+          const profile = data?.profile ?? data?.user ?? data;
+
+          hydratedProfile = {
+            email: profile?.email ?? emailAddress,
+            username: profile?.username ?? "",
+            firstName: profile?.firstName ?? "",
+            lastName: profile?.lastName ?? "",
+            location: profile?.location ?? "",
+            skills: Array.isArray(profile?.skills) ? profile.skills : [],
+            socials: profile?.socials ?? "",
+            github: profile?.github ?? "",
+            displayName: profile?.displayName ?? "",
+            bio: profile?.bio ?? "",
+            updatedAt: profile?.updatedAt,
+            role: asUserRole(profile?.role),
+          };
+
+          storeSessionProfile(hydratedProfile);
+
+          const hasCompletedProfile =
+            Boolean(hydratedProfile.username) && Boolean(hydratedProfile.displayName) && Boolean(hydratedProfile.bio);
+
+          if (hasCompletedProfile) {
+            navigate("/dashboard", { replace: true });
+            return;
+          }
+        }
+      } catch (error: unknown) {
+        console.error("Failed to lookup profile", error);
+      }
+
+      const profileForSetup =
+        hydratedProfile ??
+        ({
+          email: emailAddress,
+          username: "",
+          firstName: "",
+          lastName: "",
+          location: "",
+          skills: [],
+          socials: "",
+          github: "",
+          displayName: "",
+          bio: "",
+          role: "user",
+        } satisfies UserProfile);
+
+      if (!hydratedProfile) {
+        storeSessionProfile(profileForSetup);
+      }
+
+      navigate("/profile-setup", { replace: true, state: { email: emailAddress, profile: profileForSetup } });
+    },
+    [navigate],
+  );
+
+  const handleCredentialResponse = useCallback(
+    (response: GoogleCredentialResponse) => {
+      if (!response?.credential) {
+        toast({
+          title: "Google sign-in failed",
+          description: "Không đọc được thông tin đăng nhập.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const decoded: { email: string } = jwtDecode(response.credential);
+      handlePostAuthRouting(decoded.email);
+    },
+    [handlePostAuthRouting, toast],
+  );
+
+  const handleGetStarted = async () => {
+    if (!email) {
+      toast({
+        title: "Please enter your email",
+        description: "Chúng tôi cần email của bạn để gửi mã xác thực.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${config.authApiBaseUrl}/request-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data?.error || "Không thể gửi OTP. Vui lòng thử lại.");
+      }
+
+      sessionStorage.setItem("pendingEmail", email);
+      sessionStorage.setItem("pendingTokenId", data.tokenId);
+
+      toast({
+        title: "OTP has been sent",
+        description: "Vui lòng kiểm tra email của bạn để lấy mã xác thực.",
+      });
+
+      navigate("/verify-code", { state: { email, tokenId: data.tokenId } });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Có lỗi xảy ra, vui lòng thử lại.";
+      toast({
+        title: "Failed to send OTP",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   useEffect(() => {
-    const google = (window as any).google;
+    const google = window.google;
     if (google) {
       google.accounts.id.initialize({
         client_id: config.googleClientId,
-        callback: handleCredentialResponse
+        callback: handleCredentialResponse,
       });
-      google.accounts.id.renderButton(
-        document.getElementById("googleSignInButton"),
-        { 
-          theme: "filled_black",
-          size: "large",
-          text: "signin_with",
-          shape: "rectangular",
-          width: 320
-        }
-      );
+      google.accounts.id.renderButton(document.getElementById("googleSignInButton"), {
+        theme: "filled_black",
+        size: "large",
+        text: "signin_with",
+        shape: "rectangular",
+        width: 320,
+      });
     }
-  }, []);
+  }, [handleCredentialResponse]);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
@@ -83,6 +238,7 @@ const HeroSection = () => {
             <Button 
               onClick={handleGetStarted}
               className="w-full h-12 bg-[#FF5722] hover:bg-[#FF5722]/90 text-white font-medium text-base transition-smooth"
+              disabled={isSubmitting}
             >
               Get Started
             </Button>
