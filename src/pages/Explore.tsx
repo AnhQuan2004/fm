@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,24 +14,10 @@ import {
   Tag,
   Trophy,
 } from "lucide-react";
+import { differenceInCalendarDays, format, isPast } from "date-fns";
+import { useBounties } from "@/hooks/use-bounties";
 
 const tabs = ["All", "Courses", "Quests", "Posts"];
-
-const bountyItems = Array.from({ length: 8 }, (_, index) => ({
-  id: index,
-  title: "Build Permissionless Fee Routing Anchor Program for Sui",
-  category: "Sui · Quests",
-  due: "Due in 3d",
-  reward: "500 SUI",
-  replies: "10",
-  featured: index === 0 || index === 1,
-}));
-
-const topBounties = [
-  { title: "Build a Sui Portfolio Dashboard", reward: "500", status: "Trending", time: "5 Days" },
-  { title: "Create On-chain Voting Module", reward: "500", status: "Trending", time: "7 Days" },
-  { title: "Design Sui Ecosystem Landing", reward: "500", status: "Trending", time: "5 Days" },
-];
 
 const tutorialTags = ["Smart Contracts", "Frontend", "Economics"];
 
@@ -47,7 +34,90 @@ const contributors = [
   { name: "SuiMaps.eth" },
 ];
 
+const toTitleCase = (value?: string) => {
+  if (!value) {
+    return "";
+  }
+
+  return value
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+};
+
+const formatReward = (amount?: number, token?: string) => {
+  if (typeof amount !== "number" || Number.isNaN(amount)) {
+    return token ?? "—";
+  }
+
+  const formattedAmount = new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: amount % 1 ? 2 : 0,
+  }).format(amount);
+
+  return token ? `${formattedAmount} ${token}` : formattedAmount;
+};
+
+const getDueLabel = (deadline?: string) => {
+  if (!deadline) {
+    return null;
+  }
+
+  const date = new Date(deadline);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  if (isPast(date)) {
+    return "Closed";
+  }
+
+  const daysUntilDue = differenceInCalendarDays(date, new Date());
+
+  if (daysUntilDue <= 0) {
+    return "Due today";
+  }
+
+  if (daysUntilDue < 7) {
+    return `Due in ${daysUntilDue}d`;
+  }
+
+  if (daysUntilDue < 30) {
+    const weeksUntilDue = Math.ceil(daysUntilDue / 7);
+    return `Due in ${weeksUntilDue}w`;
+  }
+
+  return `Due ${format(date, "MMM d, yyyy")}`;
+};
+
 const Explore = () => {
+  const {
+    data: bountyData = [],
+    isLoading,
+    isError,
+    error,
+  } = useBounties();
+
+  const bounties = useMemo(
+    () =>
+      bountyData
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        ),
+    [bountyData],
+  );
+
+  const featuredIds = useMemo(
+    () => new Set(bounties.slice(0, 2).map(bounty => bounty.id)),
+    [bounties],
+  );
+
+  const topBounties = useMemo(() => bounties.slice(0, 3), [bounties]);
+
+  const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-black via-[#0B0B0B] to-black text-white">
       <NavBar />
@@ -114,45 +184,89 @@ const Explore = () => {
           </div>
 
           <div className="space-y-4">
-            {bountyItems.map(item => (
-              <Card
-                key={item.id}
-                className={`border border-white/10 bg-gradient-to-r ${
-                  item.featured
-                    ? "from-[#162447] via-[#1f3c6b] to-[#162447]"
-                    : "from-[#111111] via-[#0f0f0f] to-[#111111]"
-                } text-white shadow-lg`}
-              >
-                <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex flex-1 items-start gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#4DA2FF] to-[#0044FF] shadow-md">
-                      <Sparkles className="h-6 w-6 text-white" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-base font-semibold text-white">{item.title}</h3>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-white/60">
-                        <span>{item.category}</span>
-                        <span className="flex items-center gap-1">
-                          <Trophy className="h-3 w-3 text-[#FFEB00]" /> {item.due}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Tag className="h-3 w-3 text-[#FFAE00]" /> {item.replies}
-                        </span>
-                        {item.featured && (
-                          <Badge className="bg-[#FFEB00]/20 text-[#FFEB00]">Feature</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <p className="text-lg font-semibold text-[#FFEB00]">{item.reward}</p>
-                    <Button className="rounded-full bg-white/10 px-5 text-sm font-semibold text-white hover:bg-white/20">
-                      Submit
-                    </Button>
-                  </div>
+            {isLoading &&
+              Array.from({ length: 3 }).map((_, index) => (
+                <Card
+                  key={`loading-${index}`}
+                  className="border border-white/10 bg-black/40 text-white shadow-lg"
+                >
+                  <CardContent className="animate-pulse space-y-4 p-5">
+                    <div className="h-4 w-3/4 rounded bg-white/10" />
+                    <div className="h-3 w-full rounded bg-white/10" />
+                    <div className="h-3 w-1/2 rounded bg-white/10" />
+                  </CardContent>
+                </Card>
+              ))}
+
+            {isError && (
+              <Card className="border border-red-500/40 bg-red-500/5 text-red-200 shadow-lg">
+                <CardContent className="p-5 text-sm">
+                  Failed to load bounties: {errorMessage}
                 </CardContent>
               </Card>
-            ))}
+            )}
+
+            {!isLoading && !isError && bounties.length === 0 && (
+              <Card className="border border-white/10 bg-black/40 text-white shadow-lg">
+                <CardContent className="p-5 text-sm text-white/70">
+                  No bounties available yet. Check back soon!
+                </CardContent>
+              </Card>
+            )}
+
+            {!isLoading &&
+              !isError &&
+              bounties.map(item => {
+                const dueLabel = getDueLabel(item.deadline);
+                const rewardLabel = formatReward(item.rewardAmount, item.rewardToken);
+                const statusLabel = toTitleCase(item.status);
+                const categoryLabel = toTitleCase(item.category);
+                const isFeatured = featuredIds.has(item.id);
+
+                return (
+                  <Card
+                    key={item.id}
+                    className={`border border-white/10 bg-gradient-to-r ${
+                      isFeatured
+                        ? "from-[#162447] via-[#1f3c6b] to-[#162447]"
+                        : "from-[#111111] via-[#0f0f0f] to-[#111111]"
+                    } text-white shadow-lg`}
+                  >
+                    <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-1 items-start gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#4DA2FF] to-[#0044FF] shadow-md">
+                          <Sparkles className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-base font-semibold text-white">{item.title}</h3>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-white/60">
+                            {categoryLabel && <span>{categoryLabel}</span>}
+                            {dueLabel && (
+                              <span className="flex items-center gap-1">
+                                <Trophy className="h-3 w-3 text-[#FFEB00]" /> {dueLabel}
+                              </span>
+                            )}
+                            {statusLabel && (
+                              <span className="flex items-center gap-1">
+                                <Tag className="h-3 w-3 text-[#FFAE00]" /> {statusLabel}
+                              </span>
+                            )}
+                            {isFeatured && (
+                              <Badge className="bg-[#FFEB00]/20 text-[#FFEB00]">Featured</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <p className="text-lg font-semibold text-[#FFEB00]">{rewardLabel}</p>
+                        <Button className="rounded-full bg-white/10 px-5 text-sm font-semibold text-white hover:bg-white/20">
+                          Submit
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
           </div>
         </div>
 
@@ -163,29 +277,60 @@ const Explore = () => {
               <Badge className="bg-[#FFEB00]/30 text-[#FFEB00]">Hot</Badge>
             </CardHeader>
             <CardContent className="space-y-4">
-              {topBounties.map(bounty => (
-                <div
-                  key={bounty.title}
-                  className="rounded-xl border border-white/10 bg-black/40 p-4 shadow-md transition hover:border-[#FFAE00]/60"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#4DA2FF] to-[#0044FF]">
-                      <Flame className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <p className="text-sm font-semibold text-white">{bounty.title}</p>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-white/60">
-                        <Badge className="bg-[#4DA2FF]/20 text-[#4DA2FF]"> {bounty.reward} </Badge>
-                        <Badge className="bg-[#FFAE00]/20 text-[#FFAE00] flex items-center gap-1">
-                          <FlameIcon className="h-3 w-3" /> {bounty.status}
-                        </Badge>
-                        <Badge className="bg-white/10 text-white/70">{bounty.time}</Badge>
+              {isLoading && (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div
+                      key={`top-loading-${index}`}
+                      className="h-16 rounded-xl border border-white/10 bg-white/5 animate-pulse"
+                    />
+                  ))}
+                </div>
+              )}
+
+              {isError && (
+                <p className="text-sm text-red-200">
+                  Unable to load top bounties: {errorMessage}
+                </p>
+              )}
+
+              {!isLoading && !isError && topBounties.length === 0 && (
+                <p className="text-sm text-white/70">No bounties to highlight yet.</p>
+              )}
+
+              {!isLoading &&
+                !isError &&
+                topBounties.map(bounty => {
+                  const rewardLabel = formatReward(bounty.rewardAmount, bounty.rewardToken);
+                  const dueLabel = getDueLabel(bounty.deadline);
+                  const statusLabel = toTitleCase(bounty.status);
+
+                  return (
+                    <div
+                      key={bounty.id}
+                      className="rounded-xl border border-white/10 bg-black/40 p-4 shadow-md transition hover:border-[#FFAE00]/60"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#4DA2FF] to-[#0044FF]">
+                          <Flame className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="flex-1 space-y-2">
+                          <p className="text-sm font-semibold text-white">{bounty.title}</p>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-white/60">
+                            <Badge className="bg-[#4DA2FF]/20 text-[#4DA2FF]">{rewardLabel}</Badge>
+                            {statusLabel && (
+                              <Badge className="bg-[#FFAE00]/20 text-[#FFAE00] flex items-center gap-1">
+                                <FlameIcon className="h-3 w-3" /> {statusLabel}
+                              </Badge>
+                            )}
+                            {dueLabel && <Badge className="bg-white/10 text-white/70">{dueLabel}</Badge>}
+                          </div>
+                        </div>
+                        <ArrowUpRight className="h-4 w-4 text-white/50" />
                       </div>
                     </div>
-                    <ArrowUpRight className="h-4 w-4 text-white/50" />
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
             </CardContent>
           </Card>
 
