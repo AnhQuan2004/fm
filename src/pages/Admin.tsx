@@ -398,9 +398,8 @@ const Admin = () => {
     }
   };
 
-  const handleDeleteBounty = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!deleteBountyId.trim()) {
+  const handleDeleteBounty = async (bountyId: string) => {
+    if (!bountyId) {
       toast({
         title: "Bounty ID required",
         description: "Provide the bounty ID to delete.",
@@ -411,7 +410,7 @@ const Admin = () => {
 
     setIsDeletingBounty(true);
     try {
-      const response = await fetch(`${config.bountiesApiBaseUrl}/${deleteBountyId.trim()}`, {
+      const response = await fetch(`${config.bountiesApiBaseUrl}/${bountyId}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -817,7 +816,7 @@ const Admin = () => {
                         <span>Deadline: {new Date(bounty.deadline).toLocaleString()}</span>
                         <span>Creator: {bounty.createdBy}</span>
                       </div>
-                      <div className="mt-4">
+                      <div className="mt-4 flex gap-2">
                         <Button
                           size="sm"
                           onClick={() => {
@@ -835,6 +834,16 @@ const Admin = () => {
                           }}
                         >
                           Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            setDeleteBountyId(bounty.id);
+                            handleDeleteBounty(bounty.id);
+                          }}
+                        >
+                          Delete
                         </Button>
                       </div>
                     </div>
@@ -1049,24 +1058,6 @@ const Admin = () => {
             </section>
 
             <Separator className="border-white/10" />
-
-            <section className="space-y-4">
-              <h3 className="text-lg font-semibold">Delete bounty</h3>
-              <form className="flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={handleDeleteBounty}>
-                <div className="flex-1 space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Bounty ID</label>
-                  <Input
-                    placeholder="bounty uuid"
-                    value={deleteBountyId}
-                    onChange={event => setDeleteBountyId(event.target.value)}
-                    className="bg-slate-900/80"
-                  />
-                </div>
-                <Button type="submit" variant="destructive" disabled={isDeletingBounty} className="sm:w-48">
-                  {isDeletingBounty ? "Deleting..." : "Delete bounty"}
-                </Button>
-              </form>
-            </section>
           </CardContent>
         </Card>
       </main>
