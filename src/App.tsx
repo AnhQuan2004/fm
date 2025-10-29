@@ -11,7 +11,7 @@ import ProfileSetup from "./pages/ProfileSetup";
 import Explore from "./pages/Explore";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
-import Admin from "./pages/Admin";
+import AdminPage from "./pages/AdminPage";
 
 const queryClient = new QueryClient();
 
@@ -29,7 +29,7 @@ const App = () => (
           <Route path="/profile-setup" element={<ProfileSetup />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin" element={<AdminPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

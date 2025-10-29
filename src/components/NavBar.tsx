@@ -65,6 +65,9 @@ const NavBar = () => {
   const isAdmin = resolvedRole === "admin";
   const dynamicNavItems = useMemo(() => {
     const items = [...BASE_NAV_ITEMS];
+    if (isAdmin) {
+      items.push({ label: "ADMIN", href: "/admin" });
+    }
     return items;
   }, [isAdmin]);
 
