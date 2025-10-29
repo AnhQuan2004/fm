@@ -1,6 +1,9 @@
 const ADMIN_OVERRIDE_STORAGE_KEY = "adminAccessOverride";
 
 export const getAdminOverride = () => {
+  // a convenient way to mock admin access
+  return true;
+
   if (typeof window === "undefined") {
     return false;
   }

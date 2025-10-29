@@ -344,22 +344,19 @@ const Admin = () => {
       return;
     }
 
-    let parsedPayload: unknown;
-    try {
-      parsedPayload = JSON.parse(updatePayload);
-    } catch (error) {
-      toast({
-        title: "Invalid JSON",
-        description: "Please provide a valid JSON payload.",
-        variant: "destructive",
-      });
-      return;
-    }
+    const payload: Partial<NewBountyState> = {};
+    if (newBounty.title.trim()) payload.title = newBounty.title.trim();
+    if (newBounty.description.trim()) payload.description = newBounty.description.trim();
+    if (newBounty.category) payload.category = newBounty.category;
+    if (newBounty.rewardAmount) payload.rewardAmount = newBounty.rewardAmount;
+    if (newBounty.rewardToken.trim()) payload.rewardToken = newBounty.rewardToken.trim();
+    if (newBounty.deadline) payload.deadline = new Date(newBounty.deadline).toISOString();
+    if (newBounty.status) payload.status = newBounty.status;
 
-    if (parsedPayload === null || typeof parsedPayload !== "object") {
+    if (Object.keys(payload).length === 0) {
       toast({
-        title: "Payload required",
-        description: "Update payload must be an object.",
+        title: "No fields to update",
+        description: "Please provide at least one field to update.",
         variant: "destructive",
       });
       return;
@@ -370,6 +367,9 @@ const Admin = () => {
       const response = await fetch(`${config.bountiesApiBaseUrl}/${updateBountyId.trim()}`, {
         method: "PATCH",
         headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
           "Content-Type": "application/json",
         },
         credentials: "include",
@@ -931,7 +931,7 @@ const Admin = () => {
             <section className="space-y-4">
               <h3 className="text-lg font-semibold">Update bounty</h3>
               <form className="grid gap-4 md:grid-cols-2" onSubmit={handleUpdateBounty}>
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Bounty ID</label>
                   <Input
                     placeholder="bounty uuid"
@@ -941,15 +941,86 @@ const Admin = () => {
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-                    JSON payload (partial fields)
-                  </label>
-                  <Textarea
-                    rows={6}
-                    value={updatePayload}
-                    onChange={event => setUpdatePayload(event.target.value)}
-                    className="bg-slate-900/80 font-mono text-xs"
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Title</label>
+                  <Input
+                    placeholder="Design landing page"
+                    value={newBounty.title}
+                    onChange={event => setNewBounty(prev => ({ ...prev, title: event.target.value }))}
+                    className="bg-slate-900/80"
                   />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Description</label>
+                  <Textarea
+                    placeholder="Longer markdown or plain text"
+                    rows={4}
+                    value={newBounty.description}
+                    onChange={event => setNewBounty(prev => ({ ...prev, description: event.target.value }))}
+                    className="bg-slate-900/80"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Category</label>
+                  <Select
+                    value={newBounty.category}
+                    onValueChange={value => setNewBounty(prev => ({ ...prev, category: value }))}
+                  >
+                    <SelectTrigger className="bg-slate-900/80">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categoryOptions.map(category => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Reward amount</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="250"
+                    value={newBounty.rewardAmount}
+                    onChange={event => setNewBounty(prev => ({ ...prev, rewardAmount: event.target.value }))}
+                    className="bg-slate-900/80"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Reward token</label>
+                  <Input
+                    placeholder="USDC"
+                    value={newBounty.rewardToken}
+                    onChange={event => setNewBounty(prev => ({ ...prev, rewardToken: event.target.value }))}
+                    className="bg-slate-900/80 uppercase"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Deadline</label>
+                  <Input
+                    type="datetime-local"
+                    value={newBounty.deadline}
+                    onChange={event => setNewBounty(prev => ({ ...prev, deadline: event.target.value }))}
+                    className="bg-slate-900/80"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Status</label>
+                  <Select value={newBounty.status} onValueChange={value => setNewBounty(prev => ({ ...prev, status: value }))}>
+                    <SelectTrigger className="bg-slate-900/80">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map(status => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="md:col-span-2">
                   <Button type="submit" disabled={isUpdatingBounty}>
