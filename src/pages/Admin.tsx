@@ -364,14 +364,13 @@ const Admin = () => {
 
     setIsUpdatingBounty(true);
     try {
-      const parsedPayload = JSON.parse(updatePayload);
       const response = await fetch(`${config.bountiesApiBaseUrl}/${updateBountyId.trim()}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(parsedPayload),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -816,6 +815,25 @@ const Admin = () => {
                         <span>Reward: {bounty.rewardAmount} {bounty.rewardToken}</span>
                         <span>Deadline: {new Date(bounty.deadline).toLocaleString()}</span>
                         <span>Creator: {bounty.createdBy}</span>
+                      </div>
+                      <div className="mt-4">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setUpdateBountyId(bounty.id);
+                            setNewBounty({
+                              title: bounty.title,
+                              description: bounty.description,
+                              category: bounty.category,
+                              rewardAmount: String(bounty.rewardAmount),
+                              rewardToken: bounty.rewardToken,
+                              deadline: new Date(bounty.deadline).toISOString().slice(0, 16),
+                              status: bounty.status,
+                            });
+                          }}
+                        >
+                          Edit
+                        </Button>
                       </div>
                     </div>
                   ))}
