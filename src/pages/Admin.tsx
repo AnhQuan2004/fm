@@ -364,12 +364,10 @@ const Admin = () => {
 
     setIsUpdatingBounty(true);
     try {
+      const parsedPayload = JSON.parse(updatePayload);
       const response = await fetch(`${config.bountiesApiBaseUrl}/${updateBountyId.trim()}`, {
         method: "PATCH",
         headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
           "Content-Type": "application/json",
         },
         credentials: "include",
