@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,8 +95,9 @@ const Admin = () => {
   const [lastCreatedBountyId, setLastCreatedBountyId] = useState<string>("");
 
   const [updateBountyId, setUpdateBountyId] = useState("");
-  const [updatePayload, setUpdatePayload] = useState('{\n  "status": "in_review"\n}');
+  const [updateBounty, setUpdateBounty] = useState<NewBountyState>(initialBountyState);
   const [isUpdatingBounty, setIsUpdatingBounty] = useState(false);
+  const updateBountyRef = useRef<HTMLDivElement>(null);
 
   const [deleteBountyId, setDeleteBountyId] = useState("");
   const [isDeletingBounty, setIsDeletingBounty] = useState(false);
@@ -344,14 +345,14 @@ const Admin = () => {
       return;
     }
 
-    const payload: Partial<NewBountyState> = {};
-    if (newBounty.title.trim()) payload.title = newBounty.title.trim();
-    if (newBounty.description.trim()) payload.description = newBounty.description.trim();
-    if (newBounty.category) payload.category = newBounty.category;
-    if (newBounty.rewardAmount) payload.rewardAmount = newBounty.rewardAmount;
-    if (newBounty.rewardToken.trim()) payload.rewardToken = newBounty.rewardToken.trim();
-    if (newBounty.deadline) payload.deadline = new Date(newBounty.deadline).toISOString();
-    if (newBounty.status) payload.status = newBounty.status;
+    const payload: Partial<Omit<NewBountyState, "rewardAmount">> & { rewardAmount?: number } = {};
+    if (updateBounty.title.trim()) payload.title = updateBounty.title.trim();
+    if (updateBounty.description.trim()) payload.description = updateBounty.description.trim();
+    if (updateBounty.category) payload.category = updateBounty.category;
+    if (updateBounty.rewardAmount) payload.rewardAmount = Number(updateBounty.rewardAmount);
+    if (updateBounty.rewardToken.trim()) payload.rewardToken = updateBounty.rewardToken.trim();
+    if (updateBounty.deadline) payload.deadline = new Date(updateBounty.deadline).toISOString();
+    if (updateBounty.status) payload.status = updateBounty.status;
 
     if (Object.keys(payload).length === 0) {
       toast({
@@ -821,7 +822,7 @@ const Admin = () => {
                           size="sm"
                           onClick={() => {
                             setUpdateBountyId(bounty.id);
-                            setNewBounty({
+                            setUpdateBounty({
                               title: bounty.title,
                               description: bounty.description,
                               category: bounty.category,
@@ -830,6 +831,7 @@ const Admin = () => {
                               deadline: new Date(bounty.deadline).toISOString().slice(0, 16),
                               status: bounty.status,
                             });
+                            updateBountyRef.current?.scrollIntoView({ behavior: "smooth" });
                           }}
                         >
                           Edit
@@ -944,7 +946,7 @@ const Admin = () => {
 
             <Separator className="border-white/10" />
 
-            <section className="space-y-4">
+            <section className="space-y-4" ref={updateBountyRef}>
               <h3 className="text-lg font-semibold">Update bounty</h3>
               <form className="grid gap-4 md:grid-cols-2" onSubmit={handleUpdateBounty}>
                 <div className="space-y-2 md:col-span-2">
@@ -960,8 +962,8 @@ const Admin = () => {
                   <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Title</label>
                   <Input
                     placeholder="Design landing page"
-                    value={newBounty.title}
-                    onChange={event => setNewBounty(prev => ({ ...prev, title: event.target.value }))}
+                    value={updateBounty.title}
+                    onChange={event => setUpdateBounty(prev => ({ ...prev, title: event.target.value }))}
                     className="bg-slate-900/80"
                   />
                 </div>
@@ -970,16 +972,16 @@ const Admin = () => {
                   <Textarea
                     placeholder="Longer markdown or plain text"
                     rows={4}
-                    value={newBounty.description}
-                    onChange={event => setNewBounty(prev => ({ ...prev, description: event.target.value }))}
+                    value={updateBounty.description}
+                    onChange={event => setUpdateBounty(prev => ({ ...prev, description: event.target.value }))}
                     className="bg-slate-900/80"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Category</label>
                   <Select
-                    value={newBounty.category}
-                    onValueChange={value => setNewBounty(prev => ({ ...prev, category: value }))}
+                    value={updateBounty.category}
+                    onValueChange={value => setUpdateBounty(prev => ({ ...prev, category: value }))}
                   >
                     <SelectTrigger className="bg-slate-900/80">
                       <SelectValue />
@@ -1000,8 +1002,8 @@ const Admin = () => {
                     min="0"
                     step="0.01"
                     placeholder="250"
-                    value={newBounty.rewardAmount}
-                    onChange={event => setNewBounty(prev => ({ ...prev, rewardAmount: event.target.value }))}
+                    value={updateBounty.rewardAmount}
+                    onChange={event => setUpdateBounty(prev => ({ ...prev, rewardAmount: event.target.value }))}
                     className="bg-slate-900/80"
                   />
                 </div>
@@ -1009,8 +1011,8 @@ const Admin = () => {
                   <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Reward token</label>
                   <Input
                     placeholder="USDC"
-                    value={newBounty.rewardToken}
-                    onChange={event => setNewBounty(prev => ({ ...prev, rewardToken: event.target.value }))}
+                    value={updateBounty.rewardToken}
+                    onChange={event => setUpdateBounty(prev => ({ ...prev, rewardToken: event.target.value }))}
                     className="bg-slate-900/80 uppercase"
                   />
                 </div>
@@ -1018,14 +1020,14 @@ const Admin = () => {
                   <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Deadline</label>
                   <Input
                     type="datetime-local"
-                    value={newBounty.deadline}
-                    onChange={event => setNewBounty(prev => ({ ...prev, deadline: event.target.value }))}
+                    value={updateBounty.deadline}
+                    onChange={event => setUpdateBounty(prev => ({ ...prev, deadline: event.target.value }))}
                     className="bg-slate-900/80"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">Status</label>
-                  <Select value={newBounty.status} onValueChange={value => setNewBounty(prev => ({ ...prev, status: value }))}>
+                  <Select value={updateBounty.status} onValueChange={value => setUpdateBounty(prev => ({ ...prev, status: value }))}>
                     <SelectTrigger className="bg-slate-900/80">
                       <SelectValue />
                     </SelectTrigger>
