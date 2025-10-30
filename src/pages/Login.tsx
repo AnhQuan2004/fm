@@ -34,30 +34,6 @@ declare global {
   }
 }
 
-
-
-type GoogleCredentialResponse = {
-  credential?: string;
-};
-
-type GoogleInitializeOptions = {
-  client_id: string;
-  callback: (response: GoogleCredentialResponse) => void;
-};
-
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize: (options: GoogleInitializeOptions) => void;
-          renderButton: (element: HTMLElement | null, options: Record<string, unknown>) => void;
-        };
-      };
-    };
-  }
-}
-
 const asUserRole = (value: unknown): UserProfile["role"] => {
   if (value === "admin" || value === "partner" || value === "user") {
     return value;
@@ -107,7 +83,7 @@ const Login = () => {
             Boolean(hydratedProfile.username) && Boolean(hydratedProfile.displayName) && Boolean(hydratedProfile.bio);
 
           if (hasCompletedProfile) {
-            navigate("/dashboard", { replace: true });
+            navigate("/", { replace: true });
             return;
           }
         }

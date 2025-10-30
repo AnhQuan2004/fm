@@ -16,7 +16,7 @@ type LocationState = {
 
 const DEFAULT_PROFILE: UserProfile = {
   email: "",
-  username: "",
+  username: "l",
   firstName: "",
   lastName: "",
   location: "",
@@ -50,6 +50,7 @@ const ProfileSetup = () => {
   const [github, setGithub] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
+  const [usernameError, setUsernameError] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -174,13 +175,27 @@ const ProfileSetup = () => {
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || data?.ok === false) {
-        const errorMessage =
-          typeof data?.error === "string"
-            ? data.error
-            : "Không thể lưu hồ sơ, vui lòng thử lại.";
-        throw new Error(errorMessage);
+      const data = await response.json();
+
+      if (!response.ok) {
+        const error = data?.error;
+        let errorMessage = "An unknown error occurred.";
+
+        if (typeof error === 'string') {
+            errorMessage = error;
+        } else if (error?.username && Array.isArray(error.username) && error.username.length > 0) {
+            errorMessage = error.username[0];
+            setUsernameError(true);
+        } else {
+            errorMessage = data?.message || "Không thể lưu hồ sơ, vui lòng thử lại.";
+        }
+        
+        toast({
+          title: "Failed to save profile",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        return;
       }
 
       const apiProfile = data?.profile as Partial<UserProfile> | undefined;
@@ -196,7 +211,7 @@ const ProfileSetup = () => {
         displayName: apiProfile?.displayName ?? trimmedDisplayName,
         bio: apiProfile?.bio ?? trimmedBio,
         updatedAt: apiProfile?.updatedAt,
-        role: asUserRole(apiProfile?.role ?? baseProfile.role),
+        role: asUserRole(apiProfile?.role),
       };
 
       storeSessionProfile(updatedProfile);
@@ -206,12 +221,12 @@ const ProfileSetup = () => {
         description: "Hồ sơ của bạn đã được cập nhật.",
       });
 
-      navigate("/dashboard", { replace: true });
+      navigate("/", { replace: true });
     } catch (error: unknown) {
       const rawMessage = error instanceof Error ? error.message : "Có lỗi xảy ra, vui lòng thử lại.";
       const message = rawMessage.includes("Failed to fetch")
         ? "Không thể kết nối tới máy chủ xác thực. Hãy chắc chắn backend đang chạy (mặc định http://localhost:3000) hoặc cập nhật biến VITE_AUTH_API_BASE_URL."
-        : rawMessage;
+        : "An unexpected error occurred. Please check the console.";
       toast({
         title: "Failed to save profile",
         description: message,
@@ -260,9 +275,14 @@ const ProfileSetup = () => {
                   <Input
                     id="username"
                     value={username}
-                    onChange={event => setUsername(event.target.value)}
+                    onChange={event => {
+                      setUsername(event.target.value);
+                      setUsernameError(false);
+                    }}
                     placeholder="jason.builder"
-                    className="mt-2 h-12 border-white/10 bg-black/40 text-white placeholder:text-muted-foreground"
+                    className={`mt-2 h-12 border-white/10 bg-black/40 text-white placeholder:text-muted-foreground ${
+                      usernameError ? "border-red-500" : ""
+                    }`}
                   />
                 </div>
               </div>

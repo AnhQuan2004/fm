@@ -47,13 +47,12 @@ const topContributors = Array.from({ length: 10 }, (_, index) => ({
 const Index = () => {
   return (
     <main className="min-h-screen bg-[#080808] text-white">
+      <NavBar />
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#FF0000] via-[#FF5A00] to-[#FFB800]" />
         <div className="absolute -right-32 top-10 h-64 w-64 rounded-full bg-[#FFEB00]/40 blur-3xl" />
         <div className="absolute -left-32 bottom-0 h-72 w-72 rounded-full bg-[#890A0A]/50 blur-3xl" />
-        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 pb-20 pt-10 sm:px-10 lg:px-16">
-          <NavBar />
-
+        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 pb-20 pt-24 sm:px-10 lg:px-16">
           <div className="max-w-3xl space-y-6 text-center md:text-left">
             <p className="uppercase tracking-[0.35em] text-white/70">Sui Developer Community</p>
             <h1 className="text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
@@ -68,13 +67,15 @@ const Index = () => {
                 Start Learning
                 <PlayCircle className="h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                className="flex items-center gap-2 rounded-full border-white/60 bg-white/10 px-6 py-6 text-base font-semibold text-white hover:border-[#FFAE00] hover:text-[#FFAE00]"
-              >
-                Explore Bounties
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+              <Link to="/explore">
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 rounded-full border-white/60 bg-white/10 px-6 py-6 text-base font-semibold text-white hover:border-[#FFAE00] hover:text-[#FFAE00]"
+                >
+                  Explore Bounties
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
             </div>
           </div>
 

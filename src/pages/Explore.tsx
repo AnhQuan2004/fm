@@ -258,7 +258,10 @@ const Explore = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <p className="text-lg font-semibold text-[#FFEB00]">{rewardLabel}</p>
+                        <div className="text-right">
+                          <p className="text-lg font-semibold text-[#FFEB00]">{rewardLabel}</p>
+                          {item.creatorUsername && <p className="text-xs text-blue-400">@{item.creatorUsername}</p>}
+                        </div>
                         <Button className="rounded-full bg-white/10 px-5 text-sm font-semibold text-white hover:bg-white/20">
                           Submit
                         </Button>

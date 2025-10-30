@@ -13,7 +13,6 @@ const BASE_NAV_ITEMS = [
   { label: "EXPLORE", href: "/explore" },
   { label: "LEARN", href: "/learn" },
   { label: "EARN", href: "/earn" },
-  { label: "USER DASHBOARD", href: "/dashboard" },
 ];
 
 const NavBar = () => {
@@ -63,10 +62,15 @@ const NavBar = () => {
 
   const resolvedRole = profile?.role ?? userRole;
   const isAdmin = resolvedRole === "admin";
+  const isPartner = resolvedRole === "partner";
+
   const dynamicNavItems = useMemo(() => {
     const items = [...BASE_NAV_ITEMS];
+    if (isPartner) {
+      items.push({ label: "CREATE BOUNTY", href: "/create-bounty" });
+    }
     return items;
-  }, [isAdmin]);
+  }, [isPartner]);
 
   const avatarInitial = profile?.displayName 
     ? profile.displayName.charAt(0).toUpperCase() 
@@ -173,7 +177,7 @@ const NavBar = () => {
   return (
     <header className="sticky top-0 z-40 border-b border-[#FFAE00]/20 bg-gradient-to-r from-[#420F04]/90 via-[#712006]/90 to-[#A83608]/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-6">
           <Link to="/" className="flex items-center gap-3">
             <img src={logoSrc} alt="First Mover" className="h-10 w-auto" />
           </Link>
