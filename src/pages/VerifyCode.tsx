@@ -108,7 +108,7 @@ const VerifyCode = () => {
       const hasProfile =
         Boolean(userProfile.username) && Boolean(userProfile.displayName) && Boolean(userProfile.bio);
       if (hasProfile) {
-        navigate("/dashboard", { replace: true });
+        navigate("/", { replace: true });
       } else {
         navigate("/profile-setup", {
           replace: true,
